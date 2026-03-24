@@ -1,7 +1,7 @@
 ---
 name: tarot-reading
-description: This skill should be used when the user invokes "/tarot", asks to "read my tarot cards", "interpret my cards", "do a tarot reading", "塔罗解读", "帮我看牌", "解牌", "看一下我的牌", or mentions drawing tarot cards and wants an interpretation. Also activates when the user shares card names and asks what they mean together.
-version: 0.1.0
+description: This skill should be used when the user invokes "/tarot", asks to "read my tarot cards", "interpret my cards", "do a tarot reading", "塔罗解读", "帮我看牌", "解牌", "看一下我的牌", or mentions drawing tarot cards and wants an interpretation. Also activates when the user shares card names and asks what they mean together. Also handles "/tarot review" to reflect on past readings and outcomes.
+version: 0.2.0
 ---
 
 # Tarot Reading Skill
@@ -71,6 +71,12 @@ Use the cards as evidence in a rational argument. The reading should arrive at a
 The reading is complete when it can answer all three questions with specificity, using the cards as the reasoning foundation.
 
 ## Workflow
+
+### Step 0 — Check for Review Mode
+
+If the user typed `/tarot review` or asks to "review past readings", "look back at previous readings", or "check what happened", skip to the **Review Mode** section at the bottom of this skill. Do not start a new reading.
+
+Otherwise, before starting the reading, check if the journal file exists at `readings/journal.md`. If it does, scan it silently for any past entries with a similar question topic or overlapping cards. If relevant past entries exist, briefly surface them at the start of the reading (1–2 sentences max): *"You've asked about this before — on [date] the cards showed [brief summary]. Here's what's new today."*
 
 ### Step 1 — Establish Reading Mode
 
@@ -158,14 +164,104 @@ Answer all three explicitly, using the cards as the reasoning:
 **5. Actionable Takeaway**
 End with one concrete, specific action or change in perspective — something the querent can actually do or notice in the coming days.
 
-### Step 6 — Invite Follow-Up
+### Step 6 — Collect Feedback
 
-After the reading, ask:
-- Is there a specific card or position you want to sit with longer?
-- Want to explore what a different spread might reveal about the same question?
-- Any part of the reading that resonates strongly — or that feels off?
+After delivering the reading and any follow-up, ask the user to rate it:
 
-Engage any follow-up as a continuation of the reading conversation, not a new reading from scratch.
+> "Before we close — did this reading land for you?
+> **✓ Yes, this resonates** / **~ Partially** / **✗ This missed**
+> (You can also just say yes / kind of / no)"
+
+Wait for their response. Accept any natural language equivalent.
+
+### Step 7 — Log to Journal
+
+After receiving feedback, write an entry to `readings/journal.md`. If the file does not exist, create it with a header first, then append the entry. If it does exist, append to the end.
+
+Use this exact format for each entry:
+
+```
+---
+## [YYYY-MM-DD] — [one-line question summary]
+
+**Mode:** [Past Review / Present Calibration / Future Prediction]
+**Question:** [the user's actual question]
+**Cards:** [card names and positions]
+
+**Reading Summary:**
+- What: [1 sentence]
+- Why: [1 sentence]
+- How: [1 sentence]
+
+**Feedback:** [✓ Resonated / ~ Partial / ✗ Missed]
+**User's Note:** [what they said about why it resonated or missed — quote them directly if possible]
+
+**Committed Next Step:** [filled in Step 8 if feedback was ✓ or ~, otherwise leave blank]
+**Outcome:** [leave blank — to be filled in a future review]
+
+```
+
+### Step 8 — Capture Commitment (if feedback was ✓ or ~)
+
+If the user said the reading resonated (fully or partially), ask:
+
+> "What's one thing you're going to do — or pay attention to — based on this reading? Even something small counts."
+
+When they answer, go back and fill in the **Committed Next Step** field in the journal entry you just wrote. Update the file using Edit.
+
+If the user said the reading missed, instead ask:
+
+> "What felt off? What would have been more accurate?"
+
+Save their answer in **User's Note**. This becomes improvement data for the skill.
+
+### Step 9 — Close
+
+After logging, confirm quietly:
+
+> "Saved to your reading journal. You can revisit this anytime with `/tarot review`."
+
+Then invite any remaining follow-up as before.
+
+---
+
+## Review Mode
+
+Triggered by `/tarot review` or similar phrasing.
+
+### Review Step 1 — Load the Journal
+
+Read the full contents of `readings/journal.md`. If the file doesn't exist, tell the user there are no readings logged yet.
+
+### Review Step 2 — Ask What They Want to Review
+
+Offer three options:
+
+1. **Check outcomes** — Pick a past Future Prediction reading and record what actually happened
+2. **Find patterns** — What themes, cards, or questions keep recurring across readings?
+3. **Growth reflection** — Look at Committed Next Steps: which ones were followed through? What did you learn?
+
+### Review Step 3 — Execute the Review
+
+**For outcome check:**
+- Show the user the reading summary and their committed next step from that date
+- Ask: "What actually happened? Did the reading hold up?"
+- Edit the **Outcome** field in that journal entry with their answer
+- If the outcome confirms the reading, note which specific interpretation was accurate — this is signal for the skill
+- If the outcome contradicts the reading, note what the cards missed — this is improvement data
+
+**For pattern finding:**
+- Scan all entries and identify: recurring suits/elements, recurring question domains (career, relationships, self), cards that appear multiple times
+- Present a short synthesis: "Across [N] readings, you've most often asked about [domain]. [Suit] energy appears frequently, suggesting [theme]. Your questions tend to cluster around [pattern]."
+
+**For growth reflection:**
+- List all Committed Next Steps that have no Outcome yet
+- Ask the user to reflect: which did they follow through on, which did they avoid, and what does the avoidance itself reveal?
+- This is not judgment — frame it as the cards showing the user something they already knew but needed permission to act on
+
+### Review Step 4 — Update the Journal
+
+After any review conversation, update the relevant entries in `readings/journal.md` with whatever new information emerged. Always use Edit, not Write (to avoid overwriting other entries).
 
 ## Additional Resources
 
